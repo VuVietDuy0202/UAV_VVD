@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone PID Monitor</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1115;
+    --panel: #171b22;
+    --panel-border: #2a313d;
+    --text: #e8edf5;
+    --muted: #9aa4b2;
+    --pitch: #4af;
+    --roll: #fa4;
+    --yaw: #4f4;
+    --grid: #2d3644;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(74,170,255,0.10), transparent 26%),
+      radial-gradient(circle at top right, rgba(79,255,79,0.08), transparent 28%),
+      var(--bg);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  h1 {
+    margin: 0 0 12px;
+    text-align: center;
+    font-size: 18px;
+    letter-spacing: 0.3px;
+  }
+  .status {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: rgba(23,27,34,0.85);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .stat {
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: rgba(23,27,34,0.92);
+    padding: 12px;
+  }
+  .stat label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .stat strong {
+    font-size: 26px;
+    line-height: 1;
+  }
+  .grid {
+    display: grid;
+    gap: 12px;
+  }
+  .card {
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: rgba(23,27,34,0.92);
+    padding: 12px;
+  }
+  .card h2 {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 220px;
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  @media (max-width: 800px) {
+    .stats { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Drone PID Monitor</h1>
+  <div class="status" id="status">Preview mode: mock data is running locally.</div>
+
+  <div class="stats">
+    <div class="stat"><label>Pitch</label><strong id="vp">0.00</strong></div>
+    <div class="stat"><label>Roll</label><strong id="vr">0.00</strong></div>
+    <div class="stat"><label>Yaw rate</label><strong id="vy">0.00</strong></div>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2 style="color: var(--pitch)">Pitch</h2>
+      <div class="legend"><span><i class="dot" style="background: var(--pitch)"></i>Actual</span><span><i class="dot" style="background: #f84"></i>Setpoint</span></div>
+      <canvas id="cp"></canvas>
+    </section>
+    <section class="card">
+      <h2 style="color: var(--roll)">Roll</h2>
+      <div class="legend"><span><i class="dot" style="background: var(--roll)"></i>Actual</span><span><i class="dot" style="background: var(--pitch)"></i>Setpoint</span></div>
+      <canvas id="cr"></canvas>
+    </section>
+    <section class="card">
+      <h2 style="color: var(--yaw)">Yaw rate</h2>
+      <div class="legend"><span><i class="dot" style="background: var(--yaw)"></i>Actual</span><span><i class="dot" style="background: #aaa"></i>Setpoint</span></div>
+      <canvas id="cy"></canvas>
+    </section>
+  </div>
+</div>
+
+<script>
+const N = 240;
+const charts = {
+  p: initChart('cp', '#4af', '#f84'),
+  r: initChart('cr', '#fa4', '#4af'),
+  y: initChart('cy', '#4f4', '#aaa')
+};
+const statusEl = document.getElementById('status');
+let ws = null;
+let mockTimer = null;
+
+function initChart(id, c1, c2) {
+  const canvas = document.getElementById(id);
+  const ctx = canvas.getContext('2d');
+  return {
+    ctx,
+    actual: new Array(N).fill(0),
+    setpt: new Array(N).fill(0),
+    c1,
+    c2
+  };
+}
+
+function resizeCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(1, Math.round(rect.width * dpr));
+  const height = Math.max(1, Math.round(rect.height * dpr));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+}
+
+function drawChart(ch) {
+  const ctx = ch.ctx;
+  resizeCanvas(ctx.canvas);
+  const W = ctx.canvas.width;
+  const H = ctx.canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const all = ch.actual.concat(ch.setpt);
+  let mn = Math.min(...all);
+  let mx = Math.max(...all);
+  if (mx - mn < 2) {
+    mn -= 1;
+    mx += 1;
+  }
+
+  const scaleY = value => H - ((value - mn) / (mx - mn)) * H;
+  const zeroY = scaleY(0);
+
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, zeroY);
+  ctx.lineTo(W, zeroY);
+  ctx.stroke();
+
+  drawLine(ch.actual, ch.c1, ctx, W, H, scaleY);
+  drawLine(ch.setpt, ch.c2, ctx, W, H, scaleY);
+}
+
+function drawLine(data, color, ctx, W, H, scaleY) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  data.forEach((value, index) => {
+    const x = (index / (data.length - 1)) * W;
+    const y = scaleY(value);
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+function push(ch, actual, setpt) {
+  ch.actual.push(actual);
+  ch.actual.shift();
+  ch.setpt.push(setpt);
+  ch.setpt.shift();
+}
+
+function renderSample(sample) {
+  document.getElementById('vp').textContent = sample.p.toFixed(2);
+  document.getElementById('vr').textContent = sample.r.toFixed(2);
+  document.getElementById('vy').textContent = sample.y.toFixed(2);
+  push(charts.p, sample.p, sample.ps);
+  push(charts.r, sample.r, sample.rs);
+  push(charts.y, sample.y, sample.ys);
+  drawChart(charts.p);
+  drawChart(charts.r);
+  drawChart(charts.y);
+}
+
+function startMockData() {
+  stopRealtime();
+  statusEl.textContent = 'Preview mode: mock data is running locally.';
+  let t = 0;
+  mockTimer = setInterval(() => {
+    t += 0.08;
+    renderSample({
+      p: Math.sin(t) * 18 + Math.sin(t * 0.37) * 5,
+      ps: Math.sin(t * 0.7) * 10,
+      r: Math.cos(t * 0.9) * 14 + Math.sin(t * 0.3) * 4,
+      rs: Math.cos(t * 0.6) * 8,
+      y: Math.sin(t * 1.6) * 40,
+      ys: Math.sin(t * 1.1) * 22
+    });
+  }, 50);
+}
+
+function startRealtime() {
+  stopMock();
+  try {
+    ws = new WebSocket('ws://' + location.host + '/ws');
+    statusEl.textContent = 'Connected to WebSocket /ws.';
+    ws.onmessage = event => {
+      const data = JSON.parse(event.data);
+      renderSample(data);
+    };
+    ws.onclose = () => {
+      if (statusEl.textContent.indexOf('Connected') !== -1) {
+        statusEl.textContent = 'WebSocket closed. Returning to mock data.';
+      }
+      startMockData();
+    };
+    ws.onerror = () => {
+      statusEl.textContent = 'WebSocket error. Returning to mock data.';
+      startMockData();
+    };
+  } catch (error) {
+    startMockData();
+  }
+}
+
+function stopMock() {
+  if (mockTimer) {
+    clearInterval(mockTimer);
+    mockTimer = null;
+  }
+}
+
+function stopRealtime() {
+  if (ws) {
+    try { ws.close(); } catch (error) {}
+    ws = null;
+  }
+}
+
+window.addEventListener('resize', () => {
+  drawChart(charts.p);
+  drawChart(charts.r);
+  drawChart(charts.y);
+});
+
+startMockData();
+startRealtime();
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+Processing esp32-s3-devkitm-1 (platform: espressif32; board: esp32-s3-devkitm-1; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32-s3-devkitm-1.html
+PLATFORM: Espressif 32 (6.12.0) > Espressif ESP32-S3-DevKitM-1
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 8MB Flash
+DEBUG: Current (esp-builtin) On-board (esp-builtin) External (cmsis-dap, esp-bridge, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - framework-arduinoespressif32 @ 3.20017.241212+sha.dcc1105b 
+ - tool-esptoolpy @ 2.40900.250804 (4.9.0) 
+ - toolchain-riscv32-esp @ 8.4.0+2021r2-patch5 
+ - toolchain-xtensa-esp32s3 @ 8.4.0+2021r2-patch5
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 34 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- ESP32Servo @ 3.1.3
+|-- Wire @ 2.0.0
+Building in release mode
+Compiling .pio\build\esp32-s3-devkitm-1\src\main.cpp.o
+Building .pio\build\esp32-s3-devkitm-1\bootloader.bin
+Generating partitions .pio\build\esp32-s3-devkitm-1\partitions.bin
+Compiling .pio\build\esp32-s3-devkitm-1\lib251\ESP32Servo\ESP32PWM.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\lib251\ESP32Servo\ESP32Servo.cpp.o
+esptool.py v4.9.0
+Creating esp32s3 image...
+Merged 1 ELF section
+Successfully created esp32s3 image.
+Compiling .pio\build\esp32-s3-devkitm-1\lib73f\Wire\Wire.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\FrameworkArduino\Esp.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\FrameworkArduino\FirmwareMSC.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\FrameworkArduino\FunctionalInterrupt.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\FrameworkArduino\HWCDC.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\FrameworkArduino\HardwareSerial.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\FrameworkArduino\IPAddress.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\FrameworkArduino\IPv6Address.cpp.o
+Compiling .pio\build\esp32-s3-devkitm-1\FrameworkArduino\MD5Builder.cpp.o
+src/main.cpp:76:19: error: conflicting declaration 'volatile uint32_t last_channel_1'
+ volatile uint32_t last_channel_1 = 0, last_channel_2 = 0, last_channel_3 = 0, last_channel_4 = 0, last_channel_5 = 0, last_channel_6 = 0;
+                   ^~~~~~~~~~~~~~
+src/main.cpp:50:9: note: previous declaration as 'uint8_t last_channel_1'
+ uint8_t last_channel_1, last_channel_2, last_channel_3, last_channel_4;
+         ^~~~~~~~~~~~~~
+src/main.cpp:76:39: error: conflicting declaration 'volatile uint32_t last_channel_2'
+ volatile uint32_t last_channel_1 = 0, last_channel_2 = 0, last_channel_3 = 0, last_channel_4 = 0, last_channel_5 = 0, last_channel_6 = 0;
+                                       ^~~~~~~~~~~~~~
+src/main.cpp:50:25: note: previous declaration as 'uint8_t last_channel_2'
+ uint8_t last_channel_1, last_channel_2, last_channel_3, last_channel_4;
+                         ^~~~~~~~~~~~~~
+src/main.cpp:76:59: error: conflicting declaration 'volatile uint32_t last_channel_3'
+ volatile uint32_t last_channel_1 = 0, last_channel_2 = 0, last_channel_3 = 0, last_channel_4 = 0, last_channel_5 = 0, last_channel_6 = 0;
+                                                           ^~~~~~~~~~~~~~
+src/main.cpp:50:41: note: previous declaration as 'uint8_t last_channel_3'
+ uint8_t last_channel_1, last_channel_2, last_channel_3, last_channel_4;
+                                         ^~~~~~~~~~~~~~
+src/main.cpp:76:79: error: conflicting declaration 'volatile uint32_t last_channel_4'
+ volatile uint32_t last_channel_1 = 0, last_channel_2 = 0, last_channel_3 = 0, last_channel_4 = 0, last_channel_5 = 0, last_channel_6 = 0;
+                                                                               ^~~~~~~~~~~~~~
+src/main.cpp:50:57: note: previous declaration as 'uint8_t last_channel_4'
+ uint8_t last_channel_1, last_channel_2, last_channel_3, last_channel_4;
+                                                         ^~~~~~~~~~~~~~
+src/main.cpp: In function 'void gyro_signalen()':
+src/main.cpp:223:36: warning: ISO C++ says that these are ambiguous, even though the worst conversion for the first is better than the worst conversion for the second:
+   Wire.requestFrom(gyro_address, 14);           // Request 14 bytes from the MPU 6050.
+                                    ^
+In file included from src/main.cpp:2:
+C:/Users/Acer/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src/Wire.h:127:13: note: candidate 1: 'uint8_t TwoWire::requestFrom(int, int)'
+     uint8_t requestFrom(int address, int size);
+             ^~~~~~~~~~~
+C:/Users/Acer/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src/Wire.h:125:13: note: candidate 2: 'uint8_t TwoWire::requestFrom(uint8_t, uint8_t)'
+     uint8_t requestFrom(uint8_t address, uint8_t size);
+             ^~~~~~~~~~~
+*** [.pio\build\esp32-s3-devkitm-1\src\main.cpp.o] Error 1
+========================== [FAILED] Took 6.62 seconds ==========================
