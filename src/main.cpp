@@ -3,10 +3,10 @@
 #include "receiver/RECEIVER.h"
 #include <ESP32Servo.h>
 
-const int mot1_pin = 15;
-const int mot2_pin = 16;
-const int mot3_pin = 8;
-const int mot4_pin = 3;
+const int mot1_pin = 4;
+const int mot2_pin = 5;
+const int mot3_pin = 6;
+const int mot4_pin = 7;
 Servo mot1, mot2, mot3, mot4;
 static const int ESC_HZ = 200;
 int16_t esc_1, esc_2, esc_3, esc_4;
@@ -44,7 +44,6 @@ void update_attitude_from_imu()
   {                                                                  // Prevent the asin function to produce a NaN.
     angle_roll_acc = asin((float)acc_x / acc_total_vector) * 57.296; // Calculate the roll angle.
   }
-
   angle_pitch = angle_pitch * 0.9996 + angle_pitch_acc * 0.0004; // Correct the drift of the gyro pitch angle with the accelerometer pitch angle.
   angle_roll = angle_roll * 0.9996 + angle_roll_acc * 0.0004;    // Correct the drift of the gyro roll angle with the accelerometer roll angle.
 }
@@ -139,11 +138,15 @@ void setup()
 
 void loop()
 {
-  Serial.print("ERROR: ");
-  Serial.println(error); // Show the errors via the red LED.
+  // Serial.print("ERROR: ");
+  // Serial.println(error); // Show the errors via the red LED.
   gyro_signalen();
   update_attitude_from_imu();
   update_level_adjust();
+  // Serial.print("Roll: ");
+  // Serial.println(angle_roll);
+  // Serial.print("Pitch: ");
+  // Serial.println(angle_pitch);
 
   // For starting the motors: throttle low and yaw left (step 1).
   if (ReceiverValue[2] < 1050 && ReceiverValue[3] < 1300)
@@ -167,7 +170,7 @@ void loop()
   if (start == 2 && ReceiverValue[2] < 1050 && ReceiverValue[3] > 1700)
   {
     start = 0;
-    // green_led(HIGH); // Turn on the green led.
+     //green_led(HIGH); // Turn on the green led.
   }
 
   pid_roll_setpoint = 0;

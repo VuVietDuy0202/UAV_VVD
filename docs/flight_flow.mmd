@@ -1,0 +1,14 @@
+flowchart TD
+  Start([Bắt đầu]) --> Init[Init sensors + RX]
+  Init --> Calib[Calibrate gyro]
+  Calib --> Motors[Init ESC & PWM]
+  Motors --> Loop[Main loop]
+  Loop --> Read[Read IMU + Receiver]
+  Read --> Compute[Compute attitude]
+  Compute --> PIDNode[PID]
+  PIDNode --> Mix[Mix to 4 ESC and clamp]
+  Mix --> Output[Write ESC signals]
+  Output --> Log[Log/telemetry]
+  Log --> Loop
+  Read --> Failsafe{"RC/sensor fault?"}
+  Failsafe -->|yes| Safe[Set ESC=1000 / safe-mode]

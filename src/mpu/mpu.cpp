@@ -1,12 +1,12 @@
 #include "mpu.h"
 // Manual accelerometer calibration values for IMU angles:
-int16_t manual_acc_pitch_cal_value = 196;
-int16_t manual_acc_roll_cal_value = 3;
+int16_t manual_acc_pitch_cal_value = 27;
+int16_t manual_acc_roll_cal_value = 122;
 
-uint8_t use_manual_calibration = false;
-int16_t manual_gyro_pitch_cal_value = -14;
-int16_t manual_gyro_roll_cal_value = 61;
-int16_t manual_gyro_yaw_cal_value = 9;
+uint8_t use_manual_calibration = false; // cái này là j 
+int16_t manual_gyro_pitch_cal_value = -49;
+int16_t manual_gyro_roll_cal_value = -210;
+int16_t manual_gyro_yaw_cal_value = 43;
 
 uint8_t gyro_address = 0x68; // The I2C address of the MPU-6050 is 0x68 in hexadecimal form.
 int16_t cal_int;
@@ -15,7 +15,7 @@ int16_t acc_x, acc_y, acc_z;
 int16_t gyro_pitch, gyro_roll, gyro_yaw;
 
 int32_t acc_total_vector;
-int32_t gyro_roll_cal, gyro_pitch_cal, gyro_yaw_cal;
+int32_t gyro_roll_cal, gyro_pitch_cal, gyro_yaw_cal; 
 
 void gyro_setup(void)
 {
@@ -64,7 +64,7 @@ void gyro_signalen(void)
     gyro_yaw -= manual_gyro_yaw_cal_value;     // Subtact the manual gyro yaw calibration value.
 }
 
-void calibrate_gyro(void)
+void calibrate_gyro(void) 
 {
     if (use_manual_calibration)
         cal_int = 2000; // If manual calibration is used set cal_int to 2000 to skip the calibration.

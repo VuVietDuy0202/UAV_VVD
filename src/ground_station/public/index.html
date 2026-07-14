@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone PID Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:#09090b;color:#e4e4e7;
+  font-family:'Barlow',sans-serif;font-size:13px;
+  display:flex;flex-direction:column;min-height:100vh;overflow:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);
+  pointer-events:none;z-index:9999;
+}
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;height:44px;
+  background:#111118;border-bottom:1px solid #27272a;flex-shrink:0;
+}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:4px;color:#e4e4e7}
+.logo em{color:#22d3ee;font-style:normal}
+.hdr-r{display:flex;align-items:center;gap:18px;font-family:'Share Tech Mono',monospace;font-size:11px;color:#71717a}
+.hdr-r span b{color:#e4e4e7;font-weight:400}
+.dot{width:8px;height:8px;border-radius:50%;background:#3f3f46;display:inline-block;margin-right:5px;transition:all .3s}
+.dot.live{background:#4ade80;box-shadow:0 0 8px #4ade80;animation:pdot 2s ease-in-out infinite}
+@keyframes pdot{0%,100%{box-shadow:0 0 4px #4ade80}50%{box-shadow:0 0 12px #4ade80}}
+@keyframes blink{50%{opacity:0}}
+.cards{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid #27272a;flex-shrink:0}
+.card{padding:16px 20px 14px;border-right:1px solid #27272a;position:relative}
+.card:last-child{border-right:none}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.card.p::before{background:#22d3ee}
+.card.r::before{background:#fb7185}
+.card.y::before{background:#4ade80}
+.card-axis{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:5px}
+.card.p .card-axis{color:#22d3ee}
+.card.r .card-axis{color:#fb7185}
+.card.y .card-axis{color:#4ade80}
+.card-num{font-family:'Share Tech Mono',monospace;font-size:46px;line-height:1;letter-spacing:-1px;margin-bottom:3px}
+.card.p .card-num{color:#22d3ee}
+.card.r .card-num{color:#fb7185}
+.card.y .card-num{color:#4ade80}
+.card-unit{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#52525b;letter-spacing:2px;margin-bottom:10px}
+.sp-row{display:flex;align-items:center;gap:8px;font-family:'Share Tech Mono',monospace;font-size:11px;color:#52525b}
+.sp-row input{
+  background:#18181f;border:1px solid #3f3f46;color:#e4e4e7;
+  font-family:'Share Tech Mono',monospace;font-size:12px;
+  padding:3px 7px;border-radius:3px;width:72px;outline:none;
+}
+/* Charts: 2 ô trên, 1 ô lớn bên dưới */
+.charts{
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:minmax(220px, 1fr) minmax(240px, 1.1fr);
+  gap:8px;
+  padding:8px;
+  background:#09090b;
+  min-height:0
+}
+.cpanel{
+  min-height:0;background:#111118;
+  border:1px solid #27272a;border-radius:6px;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.cpanel.full{grid-column:1 / -1}
+.chdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 14px;background:#18181f;border-bottom:1px solid #27272a;flex-shrink:0;
+}
+.ctitle{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.ctitle.p{color:#22d3ee}.ctitle.r{color:#fb7185}.ctitle.y{color:#4ade80}
+.chdr-r{display:flex;align-items:center;gap:12px;font-family:'Share Tech Mono',monospace;font-size:10px;color:#52525b}
+.leg{display:flex;align-items:center;gap:5px}
+.leg-line{width:16px;height:2px;border-radius:1px}
+.sp-badge{
+  font-family:'Share Tech Mono',monospace;font-size:10px;
+  background:rgba(251,191,36,0.08);color:#fbbf24;
+  border:1px solid rgba(251,191,36,0.25);padding:2px 7px;border-radius:3px;
+}
+.cbody{flex:1;position:relative;min-height:0}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+footer{
+  height:32px;background:#111118;border-top:1px solid #27272a;
+  display:flex;align-items:center;padding:0 16px;
+  font-family:'Share Tech Mono',monospace;font-size:10px;flex-shrink:0;overflow:hidden;
+}
+.fa{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;margin-right:8px}
+.fa.p{color:#22d3ee}.fa.r{color:#fb7185}.fa.y{color:#4ade80}
+.fk{color:#52525b;margin-right:3px}.fv{color:#e4e4e7;margin-right:13px}
+.fsep{color:#27272a;margin:0 8px}
+#fwarn{color:#ef4444;display:none;margin-left:auto;animation:blink .8s step-end infinite}
+#fwarn.show{display:inline}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DRONE<em>.</em>PID</div>
+  <div class="hdr-r">
+    <span>PKT <b id="pkt">0</b></span>
+    <span id="hts" style="color:#22d3ee">TS —</span>
+    <span><span class="dot" id="dot"></span><span id="stxt">OFFLINE</span></span>
+  </div>
+</header>
+
+<div class="cards">
+  <div class="card p">
+    <div class="card-axis">Pitch</div>
+    <div class="card-num" id="vp">+0.00</div>
+    <div class="card-unit">DEGREES</div>
+    <div class="sp-row"><span>SP</span><input id="spp" type="number" step="0.1" value="0" readonly><span>°</span></div>
+  </div>
+  <div class="card r">
+    <div class="card-axis">Roll</div>
+    <div class="card-num" id="vr">+0.00</div>
+    <div class="card-unit">DEGREES</div>
+    <div class="sp-row"><span>SP</span><input id="spr" type="number" step="0.1" value="0" readonly><span>°</span></div>
+  </div>
+  <div class="card y">
+    <div class="card-axis">Yaw Rate</div>
+    <div class="card-num" id="vy">+0.00</div>
+    <div class="card-unit">DEG / S</div>
+    <div class="sp-row"><span>SP</span><input id="spy" type="number" step="0.1" value="0" readonly><span>°/s</span></div>
+  </div>
+</div>
+
+<div class="charts">
+  <div class="cpanel">
+    <div class="chdr">
+      <span class="ctitle p">Pitch</span>
+      <div class="chdr-r">
+        <div class="leg"><div class="leg-line" style="background:#22d3ee"></div>actual</div>
+        <div class="leg"><div class="leg-line" style="border-top:2px dashed #fbbf24;background:none"></div>setpoint</div>
+        <div class="sp-badge">SP <span id="spbp">0.00</span> °</div>
+      </div>
+    </div>
+    <div class="cbody"><canvas id="cp"></canvas></div>
+  </div>
+  <div class="cpanel">
+    <div class="chdr">
+      <span class="ctitle r">Roll</span>
+      <div class="chdr-r">
+        <div class="leg"><div class="leg-line" style="background:#fb7185"></div>actual</div>
+        <div class="leg"><div class="leg-line" style="border-top:2px dashed #fbbf24;background:none"></div>setpoint</div>
+        <div class="sp-badge">SP <span id="spbr">0.00</span> °</div>
+      </div>
+    </div>
+    <div class="cbody"><canvas id="cr"></canvas></div>
+  </div>
+  <div class="cpanel full">
+    <div class="chdr">
+      <span class="ctitle y">Yaw Rate</span>
+      <div class="chdr-r">
+        <div class="leg"><div class="leg-line" style="background:#4ade80"></div>actual</div>
+        <div class="leg"><div class="leg-line" style="border-top:2px dashed #fbbf24;background:none"></div>setpoint</div>
+        <div class="sp-badge">SP <span id="spby">0.00</span> °/s</div>
+      </div>
+    </div>
+    <div class="cbody"><canvas id="cy"></canvas></div>
+  </div>
+</div>
+
+<footer>
+  <span class="fa p">PITCH</span>
+  <span class="fk">KP</span><span class="fv" id="kpp">—</span>
+  <span class="fk">KI</span><span class="fv" id="kip">—</span>
+  <span class="fk">KD</span><span class="fv" id="kdp">—</span>
+  <span class="fsep">|</span>
+  <span class="fa r">ROLL</span>
+  <span class="fk">KP</span><span class="fv" id="kpr">—</span>
+  <span class="fk">KI</span><span class="fv" id="kir">—</span>
+  <span class="fk">KD</span><span class="fv" id="kdr">—</span>
+  <span class="fsep">|</span>
+  <span class="fa y">YAW</span>
+  <span class="fk">KP</span><span class="fv" id="kpy">—</span>
+  <span class="fk">KI</span><span class="fv" id="kiy">—</span>
+  <span class="fk">KD</span><span class="fv" id="kdy">—</span>
+  <span id="fwarn">&#9888; LOOP OVERRUN</span>
+</footer>
+
+<script>
+const PKT_HZ=50, WIN_SEC=5, MAX=WIN_SEC*PKT_HZ, FIXED_SP=0;
+const MIN_Y_SPAN=0.8;
+const Y_PAD_RATIO=0.18;
+const X_EASE=0.16;
+const Y_EASE_EXPAND=0.18;
+const Y_EASE_SHRINK=0.06;
+let startTs=null, pktCount=0;
+let smoothPitch=null, smoothRoll=null, smoothYawRate=null;
+const SMOOTH_ALPHA=0.22;
+const fmt=v=>(v>=0?'+':'')+parseFloat(v).toFixed(2);
+const f4=v=>parseFloat(v).toFixed(4);
+
+function smoothValue(current, target){
+  return current===null ? target : current + (target - current) * SMOOTH_ALPHA;
+}
+
+function smoothBounds(current, target){
+  if(current===null){
+    return target;
+  }
+  return {
+    min: current.min + (target.min - current.min) * (target.min < current.min ? Y_EASE_EXPAND : Y_EASE_SHRINK),
+    max: current.max + (target.max - current.max) * (target.max > current.max ? Y_EASE_EXPAND : Y_EASE_SHRINK),
+  };
+}
+
+function fitBounds(minValue, maxValue){
+  if(!isFinite(minValue) || !isFinite(maxValue)){
+    return {min:-1, max:1};
+  }
+  if(maxValue - minValue < MIN_Y_SPAN){
+    const center=(minValue + maxValue) / 2;
+    minValue=center - MIN_Y_SPAN / 2;
+    maxValue=center + MIN_Y_SPAN / 2;
+  }
+  const pad=Math.max((maxValue - minValue) * Y_PAD_RATIO, MIN_Y_SPAN * 0.25);
+  return {min:minValue - pad, max:maxValue + pad};
+}
+
+function syncSP(){
+  ['spp','spr','spy'].forEach(id=>document.getElementById(id).value=FIXED_SP.toFixed(2));
+  ['spbp','spbr','spby'].forEach(id=>document.getElementById(id).textContent=FIXED_SP.toFixed(2));
+}
+syncSP();
+
+function makeChart(canvasId,color){
+  const canvas=document.getElementById(canvasId);
+  const ctx=canvas.getContext('2d');
+  const data=[];
+  const renderData=[];
+  let viewStart=null;
+  let viewBounds=null;
+
+  function push(a,s,t){
+    const point={a,s,t};
+    data.push(point);
+    renderData.push({a,s,t});
+    if(data.length>MAX){data.shift();renderData.shift();}
+  }
+
+  function draw(){
+    const dpr=window.devicePixelRatio||1;
+    const rect=canvas.parentElement.getBoundingClientRect();
+    const W=Math.round(rect.width*dpr),H=Math.round(rect.height*dpr);
+    if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+    ctx.clearRect(0,0,W,H);
+    if(data.length<2)return;
+
+    const PL=46*dpr,PR=10*dpr,PT=10*dpr,PB=28*dpr;
+    const PW=W-PL-PR,PH=H-PT-PB;
+
+    if(renderData.length!==data.length){
+      renderData.length=0;
+      for(const d of data) renderData.push({a:d.a,s:d.s,t:d.t});
+    }
+
+    for(let i=0;i<renderData.length;i++){
+      renderData[i].a += (data[i].a - renderData[i].a) * 0.18;
+    }
+
+    let mn=Infinity,mx=-Infinity;
+    for(const d of renderData){mn=Math.min(mn,d.a,d.s);mx=Math.max(mx,d.a,d.s);}
+    const targetBounds=fitBounds(mn,mx);
+    viewBounds=smoothBounds(viewBounds,targetBounds);
+
+    const span=Math.max(viewBounds.max-viewBounds.min, MIN_Y_SPAN);
+    const sy=v=>PT+(1-(v-viewBounds.min)/span)*PH;
+
+    const endT = data[data.length - 1].t;
+    const targetStart = Math.max(0, endT - WIN_SEC);
+    viewStart=viewStart===null ? targetStart : viewStart + (targetStart - viewStart) * X_EASE;
+    const windowStart = viewStart;
+    const windowEnd = windowStart + WIN_SEC;
+    const timeSpan = WIN_SEC;
+
+    ctx.strokeStyle='rgba(255,255,255,0.05)';
+    ctx.lineWidth=1;ctx.setLineDash([3,5]);
+    for(let i=0;i<=4;i++){
+      const y=PT+i/4*PH;
+      ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+PW,y);ctx.stroke();
+    }
+    const tickStep = 1;
+    ctx.strokeStyle='rgba(255,255,255,0.04)';
+    const firstTick=Math.ceil(windowStart / tickStep) * tickStep;
+    const lastTick=Math.floor(windowEnd / tickStep) * tickStep;
+    for(let s=firstTick; s <= lastTick + 0.01; s += tickStep) {
+      const x = PL + ((s - windowStart) / timeSpan) * PW;
+      ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+PH);ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(PL,PT+PH);ctx.lineTo(PL+PW,PT+PH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+PH);ctx.stroke();
+
+    ctx.fillStyle='rgba(255,255,255,0.32)';
+    ctx.font=`${10*dpr}px "Share Tech Mono"`;
+    ctx.textAlign='right';ctx.textBaseline='middle';
+    for(let i=0;i<=4;i++){
+      const v=mx-(i/4)*(mx-mn);
+      ctx.fillText(v.toFixed(1),PL-6,PT+i/4*PH);
+    }
+
+    ctx.fillStyle='rgba(255,255,255,0.28)';
+    ctx.font=`${9.5*dpr}px "Share Tech Mono"`;
+    ctx.textAlign='center';ctx.textBaseline='top';
+    for(let s=firstTick; s <= lastTick + 0.01; s += tickStep) {
+      const x = PL + ((s - windowStart) / timeSpan) * PW;
+      ctx.fillText(s.toFixed(0)+'s',x,PT+PH+5*dpr);
+    }
+    ctx.textAlign='left';ctx.textBaseline='alphabetic';
+
+    const lastSP=renderData[renderData.length-1].s;
+    const spY=sy(lastSP);
+    if(spY>=PT&&spY<=PT+PH){
+      ctx.strokeStyle='#fbbf24';ctx.lineWidth=1.5*dpr;
+      ctx.setLineDash([6*dpr,4*dpr]);
+      ctx.beginPath();ctx.moveTo(PL,spY);ctx.lineTo(PL+PW,spY);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#fbbf24';
+      ctx.font=`${9*dpr}px "Share Tech Mono"`;
+      ctx.textAlign='left';ctx.textBaseline='bottom';
+      ctx.fillText('sp '+lastSP.toFixed(2),PL+5,spY-2*dpr);
+      ctx.textBaseline='alphabetic';
+    }
+
+    ctx.strokeStyle=color;ctx.lineWidth=2.2*dpr;ctx.lineJoin='round';
+    ctx.beginPath();
+    const points=[];
+    renderData.forEach((d)=>{
+      if(d.t < windowStart || d.t > windowEnd) return;
+      points.push({x:PL + ((d.t - windowStart) / timeSpan) * PW,y:sy(d.a)});
+    });
+    if(points.length===2){
+      ctx.moveTo(points[0].x,points[0].y);
+      ctx.lineTo(points[1].x,points[1].y);
+      ctx.stroke();
+    }else if(points.length>2){
+      ctx.moveTo(points[0].x,points[0].y);
+      for(let i=1;i<points.length-1;i++){
+        const midX=(points[i].x + points[i+1].x) / 2;
+        const midY=(points[i].y + points[i+1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
+      }
+      const last=points[points.length - 1];
+      ctx.lineTo(last.x,last.y);
+      ctx.stroke();
+    }else if(points.length===1){
+      ctx.moveTo(points[0].x,points[0].y);
+      ctx.lineTo(points[0].x + 0.01,points[0].y);
+      ctx.stroke();
+    }
+
+    if(data.length<MAX){
+      const prog=data.length/MAX;
+      ctx.fillStyle='rgba(255,255,255,0.06)';
+      ctx.fillRect(PL+PW-52*dpr,PT+4,50*dpr,4*dpr);
+      ctx.fillStyle=color;
+      ctx.fillRect(PL+PW-52*dpr,PT+4,50*dpr*prog,4*dpr);
+    }
+  }
+  return{push,draw};
+}
+
+const C={
+  p:makeChart('cp','#22d3ee'),
+  r:makeChart('cr','#fb7185'),
+  y:makeChart('cy','#4ade80'),
+};
+(function raf(){C.p.draw();C.r.draw();C.y.draw();requestAnimationFrame(raf);})();
+
+function applyData(d){
+  if(startTs===null)startTs=d.ts;
+  const elapsedSec=(d.ts-startTs)/1e6;
+  smoothPitch=smoothValue(smoothPitch,d.pitch);
+  smoothRoll=smoothValue(smoothRoll,d.roll);
+  smoothYawRate=smoothValue(smoothYawRate,d.yaw_rate);
+
+  document.getElementById('vp').textContent=fmt(smoothPitch);
+  document.getElementById('vr').textContent=fmt(smoothRoll);
+  document.getElementById('vy').textContent=fmt(smoothYawRate);
+  syncSP();
+  if(d.kp_pitch!==undefined){
+    document.getElementById('kpp').textContent=f4(d.kp_pitch);
+    document.getElementById('kip').textContent=f4(d.ki_pitch);
+    document.getElementById('kdp').textContent=f4(d.kd_pitch);
+    document.getElementById('kpr').textContent=f4(d.kp_roll);
+    document.getElementById('kir').textContent=f4(d.ki_roll);
+    document.getElementById('kdr').textContent=f4(d.kd_roll);
+    document.getElementById('kpy').textContent=f4(d.kp_yaw);
+    document.getElementById('kiy').textContent=f4(d.ki_yaw);
+    document.getElementById('kdy').textContent=f4(d.kd_yaw);
+  }
+  document.getElementById('hts').textContent='TS '+(d.ts/1e6).toFixed(2)+'s';
+  document.getElementById('fwarn').className=d.err===5?'show':'';
+  document.getElementById('pkt').textContent=++pktCount;
+  C.p.push(smoothPitch,   FIXED_SP,elapsedSec);
+  C.r.push(smoothRoll,    FIXED_SP,elapsedSec);
+  C.y.push(smoothYawRate, FIXED_SP,elapsedSec);
+}
+
+const isMock=location.protocol==='file:'||(location.hostname==='localhost'&&!location.port)||location.hostname==='';
+if(isMock){
+  document.getElementById('dot').classList.add('live');
+  document.getElementById('stxt').textContent='MOCK';
+  const PID={kp_pitch:1.3,ki_pitch:0.04,kd_pitch:18,kp_roll:1.3,ki_roll:0.04,kd_roll:18,kp_yaw:4.0,ki_yaw:0.02,kd_yaw:0};
+  let t=0;
+  setInterval(()=>{
+    t+=0.02;
+    const n=()=>(Math.random()-0.5)*0.4;
+    applyData({ts:Math.floor(t*1e6),pitch:Math.sin(t)*1.2+n()+0.59,roll:Math.cos(t*0.9)*0.4+n()-4.61,yaw_rate:Math.sin(t*0.5)*0.3+n(),...PID,err:0});
+  },20);
+}else{
+  function connect(){
+    const ws=new WebSocket('ws://'+location.host);
+    ws.onopen=()=>{document.getElementById('dot').classList.add('live');document.getElementById('stxt').textContent='LIVE';};
+    ws.onmessage=e=>{try{applyData(JSON.parse(e.data));}catch(_){}};
+    ws.onclose=ws.onerror=()=>{document.getElementById('dot').classList.remove('live');document.getElementById('stxt').textContent='RECONNECT';setTimeout(connect,2000);};
+  }
+  connect();
+}
+</script>
+</body>
+</html>

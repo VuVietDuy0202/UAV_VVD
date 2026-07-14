@@ -3,3 +3,16 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Node / ground station
+node_modules/
+package-lock.json
+
+# Build / log rác
+_pio_run_output.txt
+build_log.txt
+*.log
+src/ground_station/logs/
+
+# File cá nhân
+Cv_vuvietduy.tex
